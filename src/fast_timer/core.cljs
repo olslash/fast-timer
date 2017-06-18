@@ -8,6 +8,8 @@
 (defn floor [x]
   (.floor js/Math x))
 
+(def bg-color "#FFFF00")
+(def px-color "#FF0000")
 
 (defn on-js-reload [])
 (defonce app-state (atom {:height (.-innerHeight js/window)
@@ -35,13 +37,14 @@
 (defn pixel-height [state]
   (floor (/ (:height @state) (pixel-size state))))
 
-(defn set-filled-pixels [n]
-  (swap! app-state #(merge % {:filled-pixels n})))
+(defn set-filled-pixels [state n]
+  (swap! state #(merge % {:filled-pixels n})))
 
 (def canvas-dom (.getElementById js/document "canvas"))
 (def canvas-ctx (canvas/get-context canvas-dom "2d"))
 ;(def monet-canvas (canvas/init canvas-dom "2d"))
 
+(declare fill-pixels)
 (defn resize []
   (let [height (.-innerHeight js/window)
         width (.-innerWidth js/window)]
@@ -49,11 +52,12 @@
     (aset canvas-dom "height" height)
     (aset canvas-dom "width" width)
     (swap! app-state #(merge % {:height height
-                                :width width}))))
+                                :width width}))
+    (set-filled-pixels app-state 0)
+    (fill-pixels bg-color)))
 
 
 (.addEventListener js/window "resize" resize)
-(resize)
 
 (defn random-color []
   (str "#" (.toString (rand-int 16rFFFFFF) 16)))
@@ -64,8 +68,6 @@
       (canvas/stroke-rect vals)
       (canvas/fill-style color)
       (canvas/fill-rect vals)))
-
-(println (random-color))
 
 (defn fill-pixels
   ([color] (fill-pixels color
@@ -84,7 +86,7 @@
                  :h px-size}
                 color))))))
 
-(fill-pixels "#FFFF00")
+(resize)
 
 (defn tick []
   (let [total-time-ms (- (end app-state) (start app-state))
@@ -92,8 +94,8 @@
         total-pixels (* (pixel-width app-state) (pixel-height app-state))
         pixels-per-ms (/ total-pixels total-time-ms)
         needed-pixels (* time-passed-ms pixels-per-ms)]
-    (fill-pixels "#FF0000" (filled-pixels app-state) needed-pixels)
-    (set-filled-pixels needed-pixels)))
+    (fill-pixels px-color (filled-pixels app-state) needed-pixels)
+    (set-filled-pixels app-state needed-pixels)))
 
 
 (defn game-loop []
