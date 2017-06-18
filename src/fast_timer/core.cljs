@@ -5,6 +5,10 @@
 
 (enable-console-print!)
 
+(defn floor [x]
+  (.floor js/Math x))
+
+
 (defn on-js-reload [])
 (defonce app-state (atom {:height (.-innerHeight js/window)
                           :width (.-innerWidth js/window)
@@ -22,11 +26,14 @@
 (defn end [state]
   (:end @state))
 
+(defn filled-pixels [state]
+  (:filled-pixels @state))
+
 (defn pixel-width [state]
-  (.floor js/Math (/ (:width @state) (pixel-size state))))
+  (floor (/ (:width @state) (pixel-size state))))
 
 (defn pixel-height [state]
-  (.floor js/Math (/ (:height @state) (pixel-size state))))
+  (floor (/ (:height @state) (pixel-size state))))
 
 (defn set-filled-pixels [n]
   (swap! app-state #(merge % {:filled-pixels n})))
@@ -62,12 +69,14 @@
 
 (defn fill-pixels
   ([color] (fill-pixels color
+                        0
                         (* (pixel-height app-state) (pixel-width app-state))))
-  ([color n]
+
+  ([color already-filled n]
    (let [px-size (pixel-size app-state)]
-     (dotimes [p n]
-       (let [row (.floor js/Math (/ p (pixel-width app-state)))
-             col (mod p (pixel-width app-state))]
+     (dotimes [p (- n already-filled)]
+       (let [row (floor (/ (+ p already-filled) (pixel-width app-state)))
+             col (floor (mod (+ p already-filled) (pixel-width app-state)))]
          (pixel canvas-ctx
                 {:x (* px-size col)
                  :y (* px-size row)
@@ -82,9 +91,9 @@
         time-passed-ms (- (.now js/Date) (start app-state))
         total-pixels (* (pixel-width app-state) (pixel-height app-state))
         pixels-per-ms (/ total-pixels total-time-ms)
-        filled-pixels (* time-passed-ms pixels-per-ms)]
-    (fill-pixels "#FF0000" filled-pixels)
-    (set-filled-pixels filled-pixels)))
+        needed-pixels (* time-passed-ms pixels-per-ms)]
+    (fill-pixels "#FF0000" (filled-pixels app-state) needed-pixels)
+    (set-filled-pixels needed-pixels)))
 
 
 (defn game-loop []
@@ -92,5 +101,3 @@
   (monet/animation-frame game-loop))
 
 (game-loop)
-
-
